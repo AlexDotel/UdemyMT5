@@ -81,6 +81,7 @@ void OnTick() {
       double ma1 = ma(manejadorMA, 1);
       Print("Precio media Movil 1: ", ma1);
       
+      bool enMarket = false;      
       
       string orden = CruceDeMedia(Apertura1, Cierre1, ma1);
       if(orden == "Compra")
