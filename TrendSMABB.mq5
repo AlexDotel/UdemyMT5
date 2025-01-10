@@ -33,6 +33,7 @@ input ushort FixedPointTSL = 0;     //TRAILING SL POINTS
 
 datetime glTiempoAperturaBarra;
 int manejadorMA;
+int manejadorBB;
 
 //+------------------------------------------------------------------+
 //| Procesadores de eventos                                          |
@@ -49,7 +50,13 @@ int OnInit() {
      Print("No se pudo inicializar la MEDIA MOVIL");
      return (INIT_FAILED);
    }
-
+   
+   manejadorBB = BB_init(20, 0,2,PRICE_CLOSE);
+   if(manejadorBB == -1){
+     Print("No se pudo inicializar BOLLINGER");
+     return (INIT_FAILED);
+   }
+   
    Print("===== INICIO SMA TREND =====");
    return(INIT_SUCCEEDED);
 }
@@ -72,14 +79,35 @@ void OnTick() {
   }
   
   if(nuevaBarra == true){
-  
-      Print("Nueva Barra Detectada.");      
+      Print("Nueva Barra Detectada.");
+      
+      
+      // ========== PRECIO DE INDICADORES ========== //
+      
+      //Print("Precio cierre vela 1: ", Cierre(1));    
+      //Print("Cierre Normalizado: ", Normalizar(Cierre(1)));
+      
+      //Print("Precio apertura vela 1: ", Apertura(1));    
+      // Print("Apertura Normalizada: ", Normalizar(Apertura(1)));
+      
       
       double Cierre1 = Normalizar(Cierre(1));
       double Apertura1 = Normalizar(Apertura(1));
       
       double ma1 = ma(manejadorMA, 1);
       Print("Precio media Movil 1: ", ma1);
+      
+      
+      // ======== BB TEST ========= //
+      
+      double bbMid = BB(manejadorBB, 1, 0);
+      double bbUp = BB(manejadorBB, 1, 1);
+      double bbLow = BB(manejadorBB, 1, 2);
+      
+      Print("Precio de la banda Media de bollinger: ", bbMid);
+      Print("Precio de la banda Alta de bollinger: ", bbUp);
+      Print("Precio de la banda Baja de bollinger: ", bbLow);
+      
       
       
       string orden = CruceDeMedia(Apertura1, Cierre1, ma1);
@@ -195,6 +223,46 @@ double ma (int manejador, int shift){
    return Normalizar(valorMA);
 
 }
+
+
+//  -------------- Funciones BB -------------- //
+
+int BB_init(int periodoBB, int shiftBB, double devBB,ENUM_APPLIED_PRICE precioBB){
+
+   //Reset _LastError a cero, de esta forma si obtenemos un error al inicializar las bandas de bollinger, sabremos a que se debe.
+   ResetLastError();
+   
+   //Handler o manejador es un identificador unico para el indicador, usado para recibir datos, eliminarlo, etc.
+   int Manejador = iBands(_Symbol, PERIOD_CURRENT, periodoBB, shiftBB, devBB, precioBB);
+   
+   if(Manejador == INVALID_HANDLE){
+   
+      Print("Ha habido un error creando las bandas de bollinger: ", GetLastError());
+      return -1;
+      
+   }
+   
+   Print("Manejador BOLLINGER inicializado con exito.");
+   return Manejador;
+}
+
+double BB (int manejador, int shift, int buffer){
+
+   ResetLastError();
+   
+   //Creamos un array que llenaremos con los precios del indicador.
+   double BB[];
+   ArraySetAsSeries(BB, true);
+   bool resultado = CopyBuffer(manejador, buffer, 0, 10, BB);
+   if(resultado == false) {
+      Print("Error al copiar datos: ", GetLastError());}
+      
+   //Preguntar por el valor almacenado en Shift:
+   double valorBB = BB[shift];
+   return Normalizar(valorBB);
+
+}
+
 
 // =============== FUNCIONES SENALES ================= //
 
